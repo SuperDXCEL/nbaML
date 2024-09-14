@@ -65,7 +65,7 @@ They all perform similar, I will look into the actual architecture of all models
     MULTIOUTPUT_MAE for PLUS_MINUS: 1.6394930815747515
     -----------------------------------------------------
 
-6. Approach with XGBRegressor, better in every stat than ElasticNet than PLUS_MINUS:
+6. Approach with XGBRegressor, better in every stat than ElasticNet except PLUS_MINUS:
 
     MULTIOUTPUT_MAE for MIN: 25.26024415986501
     -----------------------------------------------------
