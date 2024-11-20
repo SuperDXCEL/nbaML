@@ -1,109 +1,99 @@
-# Approaches
+## Predicting Points and Other Stats Using Machine Learning Models
 
-1. Predicting points from other stats in the same game (Awful approach-> Data Leakage).
+This section summarizes the exploration of different machine learning models to predict various basketball stats from the same game. The process involved testing multiple approaches, identifying issues like data leakage, and refining methods to achieve the best possible performance.
 
-2. Predicting PTS, REB, AST with different models from [player_id, game_date, matchup]:
-    Multioutput Model    -   Mean Squared Error:   0.9642395896195829
-    Multioutput Model    -   Mean Absolute Error:  0.7798865952362899
-    Decision Tree Model  -   Mean Squared Error:   0.4544610300358123
-    Decision Tree Model  -   Mean Absolute Error:  0.2565295187785709
-    Random Forest Model  -   Mean Squared Error:   0.44835280896947866
-    Random Forest Model  -   Mean Absolute Error:  0.4691160540835029
+---
 
-3. Predicting all stats with different models, the data here must be inverted back using -> StandardScaler.inverse_transform(predictions) <- and then get the MAE for each variable,
-so approach number 2 was useless.
-   Multioutput Model average MAE = 140
-   Decision Tree average MAE = 10
-   Random Forest average MAE = 140
+### Approaches and Observations
 
-4. Approach number 3 was messed up since I was measuring all three model average MAE with the tree predictions, instead of using the actual predictions made by each model. Furthermore, I have tried MultiTaskLasso, MultiTaskElasticNet and MultiOutputRegressor(ElasticNet(alpha=0.5), num_workers=5).
-They all perform similar, I will look into the actual architecture of all models. MAE for each:
-   Multioutput Model average MAE = 4.6-5.1
-   Decision Tree average MAE = 10.1-10.3
-   Random Forest average MAE = 6.6-7.3
-   
-5. Final MultiOutputRegressor is the best performing model, still underwhelming, trained on around 76 columns of which only 39 are kept since they are over the 0.005 feature importance threshold. Turns out I was measuring the error wrong as I was not inversing the StandardScaler transformed columns properly, this are the actual numbers:
+#### 1. **Initial Approach: Predicting Points from Other Stats (Data Leakage)**
 
-    MULTIOUTPUT_MAE for MIN: 25.286315750330605
-    -----------------------------------------------------
-    MULTIOUTPUT_MAE for FGM: 4.512742201244077
-    -----------------------------------------------------
-    MULTIOUTPUT_MAE for FGA: 9.618494639452209
-    -----------------------------------------------------
-    MULTIOUTPUT_MAE for FG_PCT: 0.8510725795768563
-    -----------------------------------------------------
-    MULTIOUTPUT_MAE for FG3M: 1.4777327702664869
-    -----------------------------------------------------
-    MULTIOUTPUT_MAE for FG3A: 3.576580504907982
-    -----------------------------------------------------
-    MULTIOUTPUT_MAE for FG3_PCT: 0.8771553291850931
-    -----------------------------------------------------
-    MULTIOUTPUT_MAE for FTM: 2.117662117691145
-    -----------------------------------------------------
-    MULTIOUTPUT_MAE for FTA: 2.6356895807756686
-    -----------------------------------------------------
-    MULTIOUTPUT_MAE for FT_PCT: 0.9476607652309528
-    -----------------------------------------------------
-    MULTIOUTPUT_MAE for OREB: 1.2757554817832744
-    -----------------------------------------------------
-    MULTIOUTPUT_MAE for DREB: 3.5336600636970052
-    -----------------------------------------------------
-    MULTIOUTPUT_MAE for REB: 4.534824725629052
-    -----------------------------------------------------
-    MULTIOUTPUT_MAE for AST: 2.689088584918284
-    -----------------------------------------------------
-    MULTIOUTPUT_MAE for STL: 1.1306312744235554
-    -----------------------------------------------------
-    MULTIOUTPUT_MAE for BLK: 0.9367025460997473
-    -----------------------------------------------------
-    MULTIOUTPUT_MAE for TOV: 1.580352709528453
-    -----------------------------------------------------
-    MULTIOUTPUT_MAE for PF: 1.9808467752566252
-    -----------------------------------------------------
-    MULTIOUTPUT_MAE for PTS: 12.359489590296455
-    -----------------------------------------------------
-    MULTIOUTPUT_MAE for PLUS_MINUS: 1.6394930815747515
-    -----------------------------------------------------
+- The first attempt involved predicting `PTS`, `REB`, and `AST` directly from game data (`player_id`, `game_date`, `matchup`), which led to **data leakage**.
+- Performance of models:
+  - **Multioutput Model**:
+    - Mean Squared Error (MSE): `0.964`
+    - Mean Absolute Error (MAE): `0.780`
+  - **Decision Tree Model**:
+    - MSE: `0.454`
+    - MAE: `0.257`
+  - **Random Forest Model**:
+    - MSE: `0.448`
+    - MAE: `0.469`
 
-6. Approach with XGBRegressor, better in every stat than ElasticNet except PLUS_MINUS:
+#### 2. **Predicting All Stats with Data Inversion**
 
-    MULTIOUTPUT_MAE for MIN: 25.26024415986501
-    -----------------------------------------------------
-    MULTIOUTPUT_MAE for FGM: 4.505605511172569
-    -----------------------------------------------------
-    MULTIOUTPUT_MAE for FGA: 9.598161706676546
-    -----------------------------------------------------
-    MULTIOUTPUT_MAE for FG_PCT: 0.8402138910757747
-    -----------------------------------------------------
-    MULTIOUTPUT_MAE for FG3M: 1.401707635659422
-    -----------------------------------------------------
-    MULTIOUTPUT_MAE for FG3A: 3.560265033344969
-    -----------------------------------------------------
-    MULTIOUTPUT_MAE for FG3_PCT: 0.8513225746833859
-    -----------------------------------------------------
-    MULTIOUTPUT_MAE for FTM: 2.072811709648405
-    -----------------------------------------------------
-    MULTIOUTPUT_MAE for FTA: 2.6210188044950673
-    -----------------------------------------------------
-    MULTIOUTPUT_MAE for FT_PCT: 0.8960567320240131
-    -----------------------------------------------------
-    MULTIOUTPUT_MAE for OREB: 1.1761548292583213
-    -----------------------------------------------------
-    MULTIOUTPUT_MAE for DREB: 3.5388778602770956
-    -----------------------------------------------------
-    MULTIOUTPUT_MAE for REB: 4.550021257055016
-    -----------------------------------------------------
-    MULTIOUTPUT_MAE for AST: 2.664820926772459
-    -----------------------------------------------------
-    MULTIOUTPUT_MAE for STL: 1.0851835928966822
-    -----------------------------------------------------
-    MULTIOUTPUT_MAE for BLK: 0.8777217087489305
-    -----------------------------------------------------
-    MULTIOUTPUT_MAE for TOV: 1.5185334204057397
-    -----------------------------------------------------
-    MULTIOUTPUT_MAE for PF: 1.9839357144994396
-    -----------------------------------------------------
-    MULTIOUTPUT_MAE for PTS: 12.340039564802883
-    -----------------------------------------------------
-    MULTIOUTPUT_MAE for PLUS_MINUS: 4.136453037138675
-    -----------------------------------------------------
+- Predictions required reversing the transformation of features using `StandardScaler.inverse_transform`.
+- This approach failed due to incorrect error measurement across models.
+- Observations:
+  - **Multioutput Model**: Average MAE = `140`
+  - **Decision Tree**: Average MAE = `10`
+  - **Random Forest**: Average MAE = `140`
+
+#### 3. **Error in Measuring Across Models**
+
+- MAE was mistakenly calculated for all models using predictions from a single tree model instead of their respective outputs.
+- Tested advanced models like **MultiTaskLasso**, **MultiTaskElasticNet**, and `MultiOutputRegressor(ElasticNet(alpha=0.5), num_workers=5)`, which all performed similarly:
+  - **Multioutput Model**: MAE = `4.6–5.1`
+  - **Decision Tree**: MAE = `10.1–10.3`
+  - **Random Forest**: MAE = `6.6–7.3`
+
+---
+
+### Final Approach and Results
+
+#### Feature Selection
+- The model was trained on `76 columns`, reduced to `39 features` with a feature importance threshold of `0.005`.
+
+#### MultiOutputRegressor Performance
+Corrected the error measurement by properly reversing transformations. Results (MAE per stat):
+
+| **Stat**         | **MAE**                  |
+|-------------------|--------------------------|
+| MIN              | 25.286                  |
+| FGM              | 4.513                   |
+| FGA              | 9.618                   |
+| FG_PCT           | 0.851                   |
+| FG3M             | 1.478                   |
+| FG3A             | 3.577                   |
+| FG3_PCT          | 0.877                   |
+| FTM              | 2.118                   |
+| FTA              | 2.636                   |
+| FT_PCT           | 0.948                   |
+| OREB             | 1.276                   |
+| DREB             | 3.534                   |
+| REB              | 4.535                   |
+| AST              | 2.689                   |
+| STL              | 1.131                   |
+| BLK              | 0.937                   |
+| TOV              | 1.580                   |
+| PF               | 1.981                   |
+| PTS              | 12.359                  |
+| PLUS_MINUS       | 1.639                   |
+
+---
+
+#### XGBRegressor Performance
+Results showed improvements across most stats compared to ElasticNet, except for `PLUS_MINUS`:
+
+| **Stat**         | **MAE**                  |
+|-------------------|--------------------------|
+| MIN              | 25.260                  |
+| FGM              | 4.506                   |
+| FGA              | 9.598                   |
+| FG_PCT           | 0.840                   |
+| FG3M             | 1.402                   |
+| FG3A             | 3.560                   |
+| FG3_PCT          | 0.851                   |
+| FTM              | 2.073                   |
+| FTA              | 2.621                   |
+| FT_PCT           | 0.896                   |
+| OREB             | 1.176                   |
+| DREB             | 3.539                   |
+| REB              | 4.550                   |
+| AST              | 2.665                   |
+| STL              | 1.085                   |
+| BLK              | 0.878                   |
+| TOV              | 1.519                   |
+| PF               | 1.984                   |
+| PTS              | 12.340                  |
+| PLUS_MINUS       | 4.136                   |
